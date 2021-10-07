@@ -90,53 +90,53 @@ start = time.time()
 data, num_bands, num_vertices = read_data("SrTiO3_hr.dat")
 print("Imported in " + str(time.time() - start))
 
-print("Band Structure converted from R space to K space")
+print("Route Band Structure and convert it from R space to K space")
 start = time.time()
-k_sensitivity = 100
+sec_num_points = 100
 
 # RG = R point to Gamma point
-Kx_RG = np.linspace(0.5, 0, k_sensitivity)
-Ky_RG = np.linspace(0.5, 0, k_sensitivity)
-Kz_RG = np.linspace(0.5, 0, k_sensitivity)
+Kx_RG = np.linspace(0.5, 0, sec_num_points)
+Ky_RG = np.linspace(0.5, 0, sec_num_points)
+Kz_RG = np.linspace(0.5, 0, sec_num_points)
 
 # GX = Gamma point to X point
-Kx_GX = np.linspace(0, 0.5, k_sensitivity)
-Ky_GX = np.full(k_sensitivity, 0)
-Kz_GX = np.full(k_sensitivity, 0)
+Kx_GX = np.linspace(0, 0.5, sec_num_points)
+Ky_GX = np.full(sec_num_points, 0)
+Kz_GX = np.full(sec_num_points, 0)
 
 # XM = X point to M point
-Kx_XM = np.full(k_sensitivity, 0.5 )
-Ky_XM = np.linspace(0, 0.5, k_sensitivity)
-Kz_XM = np.full(k_sensitivity, 0)
+Kx_XM = np.full(sec_num_points, 0.5 )
+Ky_XM = np.linspace(0, 0.5, sec_num_points)
+Kz_XM = np.full(sec_num_points, 0)
 
 # MG = M point to Gamma point
-Kx_MG = np.linspace(0.5, 0, k_sensitivity)
-Ky_MG = np.linspace(0.5, 0, k_sensitivity)
-Kz_MG = np.full(k_sensitivity, 0)
+Kx_MG = np.linspace(0.5, 0, sec_num_points)
+Ky_MG = np.linspace(0.5, 0, sec_num_points)
+Kz_MG = np.full(sec_num_points, 0)
 
 # Concatenate Route
 Kx = np.concatenate((Kx_RG, Kx_GX[1:], Kx_XM[1:], Kx_MG[1:]))
 Ky = np.concatenate((Ky_RG, Ky_GX[1:], Ky_XM[1:], Ky_MG[1:]))
 Kz = np.concatenate((Kz_RG, Kz_GX[1:], Kz_XM[1:], Kz_MG[1:]))
+num_points = Kx.__len__()
 
-raw_h = np.empty((num_bands, num_bands, Kx.__len__()), dtype=complex)
+h = np.empty((num_bands, num_bands, num_points), dtype=complex)
 
 for i in range(0, num_bands):
     for j in range(0, num_bands):
-        raw_h[i][j] = R_to_K_vectorised(data[i][j][0], data[i][j][1], data[i][j][2], data[i][j][3], data[i][j][4], Kx, Ky, Kz)
+        h[i][j] = R_to_K_vectorised(data[i][j][0], data[i][j][1], data[i][j][2], data[i][j][3], data[i][j][4], Kx, Ky, Kz)
 
 print("Converted in " + str(time.time() - start))
 
 print("Diagonalising Band Structure")
 start = time.time()
 
-raw_h = np.moveaxis(raw_h, -1, 0)
+h = np.moveaxis(h, -1, 0)
 
-h = np.empty(raw_h.shape, dtype=complex)
-val = np.empty((Kx.__len__(), num_bands), dtype=complex)
-vec = np.empty((Kx.__len__(), num_bands, 3), dtype=complex)
-for n in range(0, Kx.__len__()):
-    h[n], val[n], vec[n] = diagonalise(raw_h[n])
+val = np.empty((num_points, num_bands), dtype=complex)
+vec = np.empty((num_points, num_bands, 3), dtype=complex)
+for n in range(0, num_points):
+    h[n], val[n], vec[n] = diagonalise(h[n])
 
 h = np.moveaxis(h, 0, -1)
 val = np.moveaxis(val, 0, -1)
@@ -144,13 +144,16 @@ vec = np.moveaxis(vec, 0, -1)
 
 print("Diagonalised in " + str(time.time() - start))
 
+
+print("Determened bands")
+
 print("Plotting Band Structure:")
 
 for n in range(0, num_bands):
     plt.plot(np.abs(val[n]), label="Band: " + str(n)) 
 
 plt.ylabel("E [eV]")
-plot_transitions = (k_sensitivity - 1) * np.array(range(0, 5))
+plot_transitions = (sec_num_points - 1) * np.array(range(0, 5))
 plt.xticks(plot_transitions, ['R', 'Γ', 'X', 'M', 'Γ'])
 for plot_transition in plot_transitions:
     plt.axvline(x=plot_transition, color='k', linewidth=0.5)
