@@ -127,5 +127,3 @@ for plot_transition in plot_transitions:
     plt.axvline(x=plot_transition, color='k', linewidth=0.5)
 plt.legend(["Band: dxy", "Band: dzy", "Band: dxz"])
 plt.show()
-
-print("Github test")
