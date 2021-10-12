@@ -100,7 +100,7 @@ print("Imported in " + str(time.time() - start))
 print("Create Bulk Band Structure route...")
 start = time.time()
 edge = np.pi
-step_length = edge / 10000
+step_length = edge / 1000
 sec_num_points_base = int(edge / step_length)
 
 # RG = R point to Gamma point
@@ -132,6 +132,7 @@ Kx = np.concatenate((Kx_RG, Kx_GX[1:], Kx_XM[1:], Kx_MG[1:]))
 Ky = np.concatenate((Ky_RG, Ky_GX[1:], Ky_XM[1:], Ky_MG[1:]))
 Kz = np.concatenate((Kz_RG, Kz_GX[1:], Kz_XM[1:], Kz_MG[1:]))
 num_points = Kx.__len__()
+print("Number of points: " + str(num_points))
 print("Route created in " + str(time.time() - start))
 
 
