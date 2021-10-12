@@ -79,7 +79,11 @@ def least_variation(arrays):
     return index
 
 
+
+
 start_time = time.time()
+
+
 print("Constants:")
 a = 1 # 3.905*10**-10
 z = 0
@@ -93,7 +97,7 @@ data, num_bands, num_vertices = read_data("SrTiO3_hr.dat")
 print("Imported in " + str(time.time() - start))
 
 
-print("Route Band Structure and convert it from R space to K space")
+print("Create Bulk Band Structure route...")
 start = time.time()
 edge = np.pi
 step_length = edge / 10000
@@ -128,7 +132,11 @@ Kx = np.concatenate((Kx_RG, Kx_GX[1:], Kx_XM[1:], Kx_MG[1:]))
 Ky = np.concatenate((Ky_RG, Ky_GX[1:], Ky_XM[1:], Ky_MG[1:]))
 Kz = np.concatenate((Kz_RG, Kz_GX[1:], Kz_XM[1:], Kz_MG[1:]))
 num_points = Kx.__len__()
+print("Route created in " + str(time.time() - start))
 
+
+print("Convert from R space to K space...")
+start = time.time()
 h = np.empty((num_bands, num_bands, num_points), dtype=complex)
 
 for i in range(0, num_bands):
@@ -140,23 +148,23 @@ h = np.moveaxis(h, -1, 0) # [Vertex][i][j]
 print("Converted in " + str(time.time() - start))
 
 
-print("Diagonalising Band Structure")
+print("Diagonalising Bulk Band Structure...")
 start = time.time()
-
 val = np.empty((num_points, num_bands), dtype=complex)
 vec = np.empty((num_points, num_bands, 3), dtype=complex)
+
 for n in range(0, num_points):
     h[n], val[n], vec[n] = diagonalise(h[n])
 print("Diagonalised in " + str(time.time() - start))
 
 
-print("Subtracting Conducting band minimum Energy")
+print("Subtracting Conducting Band Minimum Energy from Bulk Band Structure...")
 start = time.time()
 val = np.subtract(val, np.min(val))
 print("Subtracted in " + str(time.time() - start))
 
 
-print("Finding Weights for each band")
+print("Finding Weights for each band...")
 start = time.time()
 
 weights = np.empty((num_points, num_bands, num_bands), dtype=float)
@@ -167,7 +175,8 @@ for n in range(0, num_points):
 print("Found Weights in " + str(time.time() - start))
 
 
-print("Plotting Band Structure:")
+print("Plotting Band Structure...")
+start = time.time()
 dxz_index = least_variation(np.moveaxis(val[(Kx_RG.__len__() + Kx_GX.__len__() - 2):(Kx_RG.__len__() + Kx_GX.__len__() + Kx_XM.__len__() - 3)], 0, -1))
 dzy_index = least_variation(np.moveaxis(val[(Kx_RG.__len__() - 1):(Kx_RG.__len__() + Kx_GX.__len__() - 2)], 0, -1))
 dxy_index = 3 - (dxz_index + dzy_index)
@@ -197,6 +206,8 @@ for plot_transition in plot_transitions:
     plt.axvline(x=plot_transition, color='k', linewidth=0.5, linestyle="--")
 
 plt.legend(["Band: dzy", "Band: dxz", "Band: dxy"])
+print("Plot created in " + str(time.time() - start))
+
 
 print("Total time: " + str(time.time() - start_time))
 plt.show()
