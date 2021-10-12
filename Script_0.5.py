@@ -45,15 +45,7 @@ def read_data(file_name):
     return data, num_bands, num_vertices
 
 def R_to_K(w, Rx, Ry, Rz, t, Kx, Ky, Kz):
-    return (t / w) * np.exp(1j * (Rx * Kx + Ry * Ky + Rz * Kz))
-
-def R_to_K_vectorised(w, Rx, Ry, Rz, t, Kx, Ky, Kz):
-    h = np.empty((Kx.__len__()), dtype=complex)
-
-    for n in range(0, Kx.__len__()):
-        h[n] = np.sum(R_to_K(w, Rx, Ry, Rz, t, Kx[n], Ky[n], Kz[n]))
-
-    return h
+    return np.sum((t / w) * np.exp(-1j * (Rx * Kx + Ry * Ky + Rz * Kz)))
 
 def R_to_K_array(w, Rx, Ry, Rz, t, Kx, Ky, Kz):
     h = np.empty((Kx.__len__(), Ky.__len__(), Kz.__len__()), dtype=complex)
@@ -61,28 +53,38 @@ def R_to_K_array(w, Rx, Ry, Rz, t, Kx, Ky, Kz):
     for i in range(0, Kx.__len__()):
         for j in range(0, Ky.__len__()):
             for k in range(0, Kz.__len__()):
-                h[i][j][k] = np.sum(R_to_K(w, Rx, Ry, Rz, t, Kx[i], Ky[j], Kz[i]))
+                h[i][j][k] = R_to_K(w, Rx, Ry, Rz, t, Kx[i], Ky[j], Kz[i])
 
     return h
 
+def K_to_KZ(h, Kz, z):
+    return np.sum()
+
 def diagonalise(m):
     val, vec = np.linalg.eigh(m)
-    vec = np.transpose(vec)
-
     inv_vec = np.linalg.inv(vec)
-
     diag_m = np.dot(np.dot(inv_vec, m), vec)
 
     val, vec = np.linalg.eigh(diag_m)
-
     return diag_m, val, vec
+
+def least_variation(arrays):
+    min_dif = np.max(arrays[0])
+    index = 0
+    for i in range(0, arrays.__len__()):
+        dif = np.max(arrays[i]) - np.min(arrays[i])
+        if dif < min_dif:
+            min_dif = dif
+            index = i
+    return index
 
 
 print("Constants:")
-a = 3.905*10**-10
+a = 1 # 3.905*10**-10
 z = 0
 print("a: " + str(a))
 print("z: " + str(z))
+
 
 print("Importing Data...")
 start = time.time()
@@ -90,9 +92,10 @@ start = time.time()
 data, num_bands, num_vertices = read_data("SrTiO3_hr.dat")
 print("Imported in " + str(time.time() - start))
 
+
 print("Route Band Structure and convert it from R space to K space")
 start = time.time()
-sec_num_points = 100
+sec_num_points = 1000
 
 # RG = R point to Gamma point
 Kx_RG = np.linspace(0.5, 0, sec_num_points)
@@ -124,38 +127,46 @@ h = np.empty((num_bands, num_bands, num_points), dtype=complex)
 
 for i in range(0, num_bands):
     for j in range(0, num_bands):
-        h[i][j] = R_to_K_vectorised(data[i][j][0], data[i][j][1], data[i][j][2], data[i][j][3], data[i][j][4], Kx, Ky, Kz)
+        for k in range(0, num_points):
+            h[i][j][k] = R_to_K(data[i][j][0], data[i][j][1], data[i][j][2], data[i][j][3], data[i][j][4], Kx[k], Ky[k], Kz[k])
 
+h = np.moveaxis(h, -1, 0) # [Vertex][i][j]
 print("Converted in " + str(time.time() - start))
+
 
 print("Diagonalising Band Structure")
 start = time.time()
-
-h = np.moveaxis(h, -1, 0)
 
 val = np.empty((num_points, num_bands), dtype=complex)
 vec = np.empty((num_points, num_bands, 3), dtype=complex)
 for n in range(0, num_points):
     h[n], val[n], vec[n] = diagonalise(h[n])
-
-h = np.moveaxis(h, 0, -1)
-val = np.moveaxis(val, 0, -1)
-vec = np.moveaxis(vec, 0, -1)
-
 print("Diagonalised in " + str(time.time() - start))
 
 
-print("Determened bands")
-
 print("Plotting Band Structure:")
+dxy_index = np.argmax(np.moveaxis(val[3 * (sec_num_points - 1)], 0, -1))
+dxz_index = least_variation(np.moveaxis(val[2 * (sec_num_points - 1):3 * (sec_num_points - 1)], 0, -1))
+dzy_index = least_variation(np.moveaxis(val[(sec_num_points - 1):2 * (sec_num_points - 1)], 0, -1))
 
+val = np.moveaxis(val, 0, -1) # [band][Vertex]
 for n in range(0, num_bands):
-    plt.plot(np.abs(val[n]), label="Band: " + str(n)) 
+    band = n
+    if band == dxy_index:
+        band = "dxy"
+    elif band == dxz_index:
+        band = "dxz"
+    elif band == dzy_index:
+        band = "dzy"
+    plt.plot(np.real(val[n]), label="Band: " + band) 
+val = np.moveaxis(val, -1, 0) # [Vertex][Band]
 
 plt.ylabel("E [eV]")
+
 plot_transitions = (sec_num_points - 1) * np.array(range(0, 5))
 plt.xticks(plot_transitions, ['R', 'Γ', 'X', 'M', 'Γ'])
 for plot_transition in plot_transitions:
-    plt.axvline(x=plot_transition, color='k', linewidth=0.5)
+    plt.axvline(x=plot_transition, color='k', linewidth=0.5, linestyle="--")
+
 plt.legend(["Band: dzy", "Band: dxz", "Band: dxy"])
 plt.show()
