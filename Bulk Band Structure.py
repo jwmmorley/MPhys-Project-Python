@@ -1,3 +1,4 @@
+import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
 import time
@@ -173,6 +174,7 @@ for n in range(0, num_points):
     for i in range(0, num_bands):
         for j in range(0, num_bands):
             weights[n][i][j] = np.abs(vec[n][i][j])**2
+weights = (weights - np.min(weights)) / np.max(weights)
 print("Found Weights in " + str(time.time() - start))
 
 
@@ -183,6 +185,7 @@ dzy_index = least_variation(np.moveaxis(val[(Kx_RG.__len__() - 1):(Kx_RG.__len__
 dxy_index = 3 - (dxz_index + dzy_index)
 
 val = np.moveaxis(val, 0, -1) # [band][Vertex]
+weights = np.moveaxis(weights, 1, 0) # [i][Vertex][j]
 for n in range(0, num_bands):
     band = str(n)
     if band == dxy_index:
@@ -191,8 +194,10 @@ for n in range(0, num_bands):
         band = "dxz"
     elif band == dzy_index:
         band = "dzy"
-    plt.plot(np.real(val[n]), label="Band: " + band) 
+    #plt.plot(np.real(val[n]), label="Band: " + band)
+    plt.scatter(range(0, num_points), np.real(val[n]), c=weights[n], s=0.5, alpha=0.5, label="Band: " + band) 
 val = np.moveaxis(val, -1, 0) # [Vertex][Band]
+weights = np.moveaxis(weights, 0, 1) # [Vertex][i][j]
 
 plt.ylabel("E - E$_{cbm}$ [eV]")
 
@@ -204,7 +209,7 @@ plot_transitions = np.append(plot_transitions, plot_transitions[-1] + Kx_MG.__le
 
 plt.xticks(plot_transitions, ['R', 'Γ', 'X', 'M', 'Γ'])
 for plot_transition in plot_transitions:
-    plt.axvline(x=plot_transition, color='k', linewidth=0.5, linestyle="--")
+    plt.axvline(x=plot_transition, color='k', linewidth=0.5, linestyle="-")
 
 plt.legend(["Band: dzy", "Band: dxz", "Band: dxy"])
 print("Plot created in " + str(time.time() - start))
