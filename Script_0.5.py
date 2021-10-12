@@ -79,6 +79,7 @@ def least_variation(arrays):
     return index
 
 
+start_time = time.time()
 print("Constants:")
 a = 1 # 3.905*10**-10
 z = 0
@@ -88,33 +89,38 @@ print("z: " + str(z))
 
 print("Importing Data...")
 start = time.time()
-
 data, num_bands, num_vertices = read_data("SrTiO3_hr.dat")
 print("Imported in " + str(time.time() - start))
 
 
 print("Route Band Structure and convert it from R space to K space")
 start = time.time()
-sec_num_points = 1000
+edge = np.pi
+step_length = edge / 10000
+sec_num_points_base = int(edge / step_length)
 
 # RG = R point to Gamma point
-Kx_RG = np.linspace(0.5, 0, sec_num_points)
-Ky_RG = np.linspace(0.5, 0, sec_num_points)
-Kz_RG = np.linspace(0.5, 0, sec_num_points)
+sec_num_points = int(sec_num_points_base * np.sqrt(3))
+Kx_RG = np.linspace(edge, 0, sec_num_points)
+Ky_RG = np.linspace(edge, 0, sec_num_points)
+Kz_RG = np.linspace(edge, 0, sec_num_points)
 
 # GX = Gamma point to X point
-Kx_GX = np.linspace(0, 0.5, sec_num_points)
+sec_num_points = sec_num_points_base
+Kx_GX = np.linspace(0, edge, sec_num_points)
 Ky_GX = np.full(sec_num_points, 0)
 Kz_GX = np.full(sec_num_points, 0)
 
 # XM = X point to M point
-Kx_XM = np.full(sec_num_points, 0.5 )
-Ky_XM = np.linspace(0, 0.5, sec_num_points)
+sec_num_points = sec_num_points_base
+Kx_XM = np.full(sec_num_points, edge)
+Ky_XM = np.linspace(0, edge, sec_num_points)
 Kz_XM = np.full(sec_num_points, 0)
 
 # MG = M point to Gamma point
-Kx_MG = np.linspace(0.5, 0, sec_num_points)
-Ky_MG = np.linspace(0.5, 0, sec_num_points)
+sec_num_points = int(sec_num_points_base * np.sqrt(2))
+Kx_MG = np.linspace(edge, 0, sec_num_points)
+Ky_MG = np.linspace(edge, 0, sec_num_points)
 Kz_MG = np.full(sec_num_points, 0)
 
 # Concatenate Route
@@ -144,15 +150,31 @@ for n in range(0, num_points):
 print("Diagonalised in " + str(time.time() - start))
 
 
+print("Subtracting Conducting band minimum Energy")
+start = time.time()
+val = np.subtract(val, np.min(val))
+print("Subtracted in " + str(time.time() - start))
+
+
+print("Finding Weights for each band")
+start = time.time()
+
+weights = np.empty((num_points, num_bands, num_bands), dtype=float)
+for n in range(0, num_points):
+    for i in range(0, num_bands):
+        for j in range(0, num_bands):
+            weights[n][i][j] = np.abs(vec[n][i][j])**2
+print("Found Weights in " + str(time.time() - start))
+
+
 print("Plotting Band Structure:")
-#dxy_index = np.argmax(np.moveaxis(val[3 * (sec_num_points - 1)], 0, -1))
-dxz_index = least_variation(np.moveaxis(val[2 * (sec_num_points - 1):3 * (sec_num_points - 1)], 0, -1))
-dzy_index = least_variation(np.moveaxis(val[(sec_num_points - 1):2 * (sec_num_points - 1)], 0, -1))
+dxz_index = least_variation(np.moveaxis(val[(Kx_RG.__len__() + Kx_GX.__len__() - 2):(Kx_RG.__len__() + Kx_GX.__len__() + Kx_XM.__len__() - 3)], 0, -1))
+dzy_index = least_variation(np.moveaxis(val[(Kx_RG.__len__() - 1):(Kx_RG.__len__() + Kx_GX.__len__() - 2)], 0, -1))
 dxy_index = 3 - (dxz_index + dzy_index)
 
 val = np.moveaxis(val, 0, -1) # [band][Vertex]
 for n in range(0, num_bands):
-    band = n
+    band = str(n)
     if band == dxy_index:
         band = "dxy"
     elif band == dxz_index:
@@ -162,12 +184,19 @@ for n in range(0, num_bands):
     plt.plot(np.real(val[n]), label="Band: " + band) 
 val = np.moveaxis(val, -1, 0) # [Vertex][Band]
 
-plt.ylabel("E [eV]")
+plt.ylabel("E - E$_{cbm}$ [eV]")
 
-plot_transitions = (sec_num_points - 1) * np.array(range(0, 5))
+plot_transitions = np.array([0])
+plot_transitions = np.append(plot_transitions, plot_transitions[-1] + Kx_RG.__len__() - 1)
+plot_transitions = np.append(plot_transitions, plot_transitions[-1] + Kx_GX.__len__() - 1)
+plot_transitions = np.append(plot_transitions, plot_transitions[-1] + Kx_XM.__len__() - 1)
+plot_transitions = np.append(plot_transitions, plot_transitions[-1] + Kx_MG.__len__() - 1)
+
 plt.xticks(plot_transitions, ['R', 'Γ', 'X', 'M', 'Γ'])
 for plot_transition in plot_transitions:
     plt.axvline(x=plot_transition, color='k', linewidth=0.5, linestyle="--")
 
 plt.legend(["Band: dzy", "Band: dxz", "Band: dxy"])
+
+print("Total time: " + str(time.time() - start_time))
 plt.show()
