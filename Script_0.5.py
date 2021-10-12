@@ -145,9 +145,10 @@ print("Diagonalised in " + str(time.time() - start))
 
 
 print("Plotting Band Structure:")
-dxy_index = np.argmax(np.moveaxis(val[3 * (sec_num_points - 1)], 0, -1))
+#dxy_index = np.argmax(np.moveaxis(val[3 * (sec_num_points - 1)], 0, -1))
 dxz_index = least_variation(np.moveaxis(val[2 * (sec_num_points - 1):3 * (sec_num_points - 1)], 0, -1))
 dzy_index = least_variation(np.moveaxis(val[(sec_num_points - 1):2 * (sec_num_points - 1)], 0, -1))
+dxy_index = 3 - (dxz_index + dzy_index)
 
 val = np.moveaxis(val, 0, -1) # [band][Vertex]
 for n in range(0, num_bands):
