@@ -81,7 +81,8 @@ def least_variation(arrays):
 
 
 
-
+debug_times = np.array([], dtype='f8')
+debug_labels = np.array([], dtype='U16')
 start_time = time.time()
 
 
@@ -95,7 +96,10 @@ print("z: " + str(z))
 print("Importing Data...")
 start = time.time()
 data, num_bands, num_vertices = read_data("SrTiO3_hr.dat")
-print("Imported in " + str(time.time() - start))
+debug_times = np.append(debug_times, time.time() - start)
+debug_labels = np.append(debug_labels, "Import")
+print("Imported in " + str(debug_times[-1]))
+
 
 
 print("Create Bulk Band Structure route...")
@@ -134,7 +138,9 @@ Ky = np.concatenate((Ky_RG, Ky_GX[1:], Ky_XM[1:], Ky_MG[1:]))
 Kz = np.concatenate((Kz_RG, Kz_GX[1:], Kz_XM[1:], Kz_MG[1:]))
 num_points = Kx.__len__()
 print("Number of points: " + str(num_points))
-print("Route created in " + str(time.time() - start))
+debug_times = np.append(debug_times, time.time() - start)
+debug_labels = np.append(debug_labels, "Route Created")
+print("Route created in " + str(debug_times[-1]))
 
 
 print("Convert from R space to K space...")
@@ -147,7 +153,9 @@ for i in range(0, num_bands):
             h[i][j][k] = R_to_K(data[i][j][0], data[i][j][1], data[i][j][2], data[i][j][3], data[i][j][4], Kx[k], Ky[k], Kz[k])
 
 h = np.moveaxis(h, -1, 0) # [Vertex][i][j]
-print("Converted in " + str(time.time() - start))
+debug_times = np.append(debug_times, time.time() - start)
+debug_labels = np.append(debug_labels, "Converted")
+print("Converted in " + str(debug_times[-1]))
 
 
 print("Diagonalising Bulk Band Structure...")
@@ -157,13 +165,17 @@ vec = np.empty((num_points, num_bands, 3), dtype=complex)
 
 for n in range(0, num_points):
     h[n], val[n], vec[n] = diagonalise(h[n])
-print("Diagonalised in " + str(time.time() - start))
+debug_times = np.append(debug_times, time.time() - start)
+debug_labels = np.append(debug_labels, "Diagonalised")
+print("Diagonalised in " + str(debug_times[-1]))
 
 
 print("Subtracting Conducting Band Minimum Energy from Bulk Band Structure...")
 start = time.time()
 val = np.subtract(val, np.min(val))
-print("Subtracted in " + str(time.time() - start))
+debug_times = np.append(debug_times, time.time() - start)
+debug_labels = np.append(debug_labels, "Subtraction")
+print("Subtracted in " + str(debug_times[-1]))
 
 
 print("Finding Weights for each band...")
@@ -175,7 +187,9 @@ for n in range(0, num_points):
         for j in range(0, num_bands):
             weights[n][i][j] = np.abs(vec[n][i][j])**2
 weights = (weights - np.min(weights)) / np.max(weights)
-print("Found Weights in " + str(time.time() - start))
+debug_times = np.append(debug_times, time.time() - start)
+debug_labels = np.append(debug_labels, "Weights")
+print("Found Weights in " + str(debug_times[-1]))
 
 
 print("Plotting Band Structure...")
@@ -212,8 +226,15 @@ for plot_transition in plot_transitions:
     plt.axvline(x=plot_transition, color='k', linewidth=0.5, linestyle="-")
 
 plt.legend(["Band: dzy", "Band: dxz", "Band: dxy"])
-print("Plot created in " + str(time.time() - start))
+debug_times = np.append(debug_times, time.time() - start)
+debug_labels = np.append(debug_labels, "Plotting")
+print("Plot created in " + str(debug_times[-1]))
 
 
 print("Total time: " + str(time.time() - start_time))
+plt.show()
+
+
+print("Showing Debug graph...")
+plt.pie(debug_times, labels = debug_labels, autopct='%1.1f%%')
 plt.show()
